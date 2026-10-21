@@ -1,0 +1,112 @@
+.layer {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.layer span {
+  position: absolute;
+  display: block;
+  line-height: 0;
+}
+
+/* Top corners: smiley bubble on the right, confetti on the left */
+.topStart {
+  position: absolute;
+  top: 20px;
+  right: max(0px, calc(50% - 280px));
+  width: 100px;
+  height: 90px;
+}
+
+.topStart > svg {
+  position: absolute;
+  top: 12px;
+  right: 24px;
+  width: 56px;
+  height: 56px;
+}
+
+.dashA {
+  top: -8px;
+  right: 4px;
+}
+
+.dashB {
+  top: 34px;
+  right: -6px;
+}
+
+.topEnd {
+  position: absolute;
+  top: 44px;
+  left: max(8px, calc(50% - 280px));
+  width: 90px;
+  height: 70px;
+}
+
+.dashC {
+  top: 22px;
+  left: 0;
+}
+
+.dashD {
+  top: 0;
+  left: 40px;
+}
+
+/* Bottom corners: soft organic blobs that stay pinned to the viewport */
+.blob {
+  position: fixed;
+  bottom: -40px;
+  width: 180px;
+  height: 150px;
+}
+
+.blob::before {
+  content: "";
+  position: absolute;
+  inset: 40px 0 0;
+  border-radius: 60% 40% 0 0 / 70% 60% 0 0;
+}
+
+.blobEnd {
+  left: -40px;
+}
+
+.blobEnd::before {
+  background: var(--color-lavender);
+  opacity: 0.75;
+}
+
+.blobStart {
+  right: -40px;
+}
+
+.blobStart::before {
+  background: var(--color-peach);
+  opacity: 0.8;
+  border-radius: 40% 60% 0 0 / 60% 70% 0 0;
+}
+
+.dashE {
+  top: -16px;
+  left: 70px;
+}
+
+.dashF {
+  top: 18px;
+  left: 112px;
+}
+
+.dashG {
+  top: 20px;
+  left: 0;
+}
+
+.dashH {
+  top: -12px;
+  left: 30px;
+}

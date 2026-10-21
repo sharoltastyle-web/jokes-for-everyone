@@ -1,0 +1,16 @@
+.main {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 480px;
+  margin: 0 auto;
+  padding: 72px var(--space-3) 160px;
+}
+
+.title {
+  margin: 0 0 64px;
+  text-align: center;
+  font-size: 32px;
+  line-height: 40px;
+  font-weight: 800;
+}

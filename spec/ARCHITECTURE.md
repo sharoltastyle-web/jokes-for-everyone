@@ -243,3 +243,20 @@ Moderation מזהה תוכן מזיק בבירור (אלימות, תוכן מי�
 19. [Vercel — Environment variables](https://vercel.com/docs/environment-variables)
 20. [Vercel — Pricing](https://vercel.com/pricing)
 21. [Vercel — WAF usage and pricing](https://vercel.com/docs/vercel-firewall/vercel-waf/usage-and-pricing)
+
+## החלטות מרכזיות (ADRs)
+
+### ADR-1: בחירת מודל ה־AI — gpt-5.6-luna
+**הקשר:** ARCHITECTURE מחייב לבחור בתחילת Milestone 1 מודל טקסט נתמך ב־Responses API, שאינו ב־Deprecations, מהיר וזול. בבדיקה ב־21.10.2026 המודלים הקטנים הקודמים (gpt-5-mini, gpt-5-nano, gpt-4.1-mini, gpt-4o-mini, gpt-5.1) מסומנים Deprecated.
+**החלטה:** `OPENAI_MODEL=gpt-5.6-luna` (אושר על ידי המשתמש). זהו מודל Reasoning; לכן נשלח `reasoning.effort: "none"` — הרמה הנמוכה ביותר שהוא תומך בה. לא נשלח `temperature`.
+**השלכות:** עלות נמוכה (0.20$ / 1.20$ למיליון Tokens) וזמני תגובה של 2–4 שניות בבדיקה. ערך `reasoning.effort` קבוע בקוד; החלפה למודל שאינו תומך ב־`"none"` תחייב שינוי קטן בקוד. בבדיקה נצפו בדיחות חוזרות לאותו נושא — מותר לפי ה־PRD (אין התחייבות למניעת חזרות).
+
+### ADR-2: קובץ סודות מקומי `.env`
+**הקשר:** ARCHITECTURE מזכיר `.env.local`, וכללי העבודה בפרויקט מורים על `.env` שנוצר מ־`.env.example`.
+**החלטה:** משתמשים ב־`.env`. Next.js טוען אותו באותו אופן, והוא מוחרג מ־Git ב־`.gitignore`.
+**השלכות:** אין שינוי בהתנהגות או באבטחה. שינוי ב־`.env` מחייב הפעלה מחדש של שרת הפיתוח.
+
+### ADR-3: Next.js 16 עם Cache Components
+**הקשר:** תבנית `create-next-app` של Next.js 16.4 מפעילה `cacheComponents` כברירת מחדל, ובמצב זה אסור לייצא `runtime` מ־Route Handler.
+**החלטה:** נשמרה ברירת המחדל; ה־Route Handler רץ ב־Node.js כברירת מחדל ללא `export const runtime`, עם `maxDuration = 30`.
+**השלכות:** המסך מוגש כסטטי וה־API דינמי, כמתוכנן ב־ARCHITECTURE.
