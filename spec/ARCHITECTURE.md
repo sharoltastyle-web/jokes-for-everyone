@@ -9,7 +9,7 @@
 | Frontend | React עם Next.js App Router ו־TypeScript | מסך יחיד, ניהול מצב הטופס והצגת בדיחה |
 | עיצוב | CSS Modules ו־CSS רגיל | Responsive UI, עברית ו־RTL |
 | Backend | Next.js Route Handler ב־Node.js 24.x | API יחיד, אימות קלט, הפעלת AI וטיפול בשגיאות |
-| יצירת בדיחות | OpenAI GPT-5 באמצעות Responses API | יצירת בדיחה בעברית לפי כללי ה־PRD |
+| יצירת בדיחות | מודל OpenAI נתמך (מוגדר ב־OPENAI_MODEL) באמצעות Responses API | יצירת בדיחה בעברית לפי כללי ה־PRD |
 | חיבור ל־OpenAI | חבילת openai הרשמית ל־TypeScript | קריאות ל־Responses ול־Moderation מהשרת בלבד |
 | בדיקת תוכן | OpenAI Moderation API, מודל omni-moderation-latest | בדיקת פלט לפני הצגתו; רכיב מימוש של דרישת התוכן הקיימת |
 | PWA | Web App Manifest ו־HTTPS | התקנה באמצעות יכולות הדפדפן |
@@ -32,11 +32,17 @@ Vercel מתאים לבקשות Stateless קצרות יחסית ומספק חיב
 
 יש להשתמש בענף Stable נתמך של Next.js ובגרסת React הנתמכת על ידו, עם TypeScript וגרסת SDK יציבה תואמת. Next.js 16 הוא בסיס התכנון; אין להשתמש ב־Canary או ביכולות Experimental. Node.js יוגדר במפורש כ־24.x בפיתוח וב־Vercel. הגרסאות המדויקות יינעלו ב־package-lock.json; Build יבוצע באמצעות npm ci. אין לקבע במסמך מספר Patch שהופך במהירות למיושן. [10]
 
-### מגבלה מהותית: מחזור החיים של GPT-5
+### בחירת המודל ומחזור החיים שלו
 
-GPT-5 נשמר בהתאם לדרישת המוצר. עם זאת, דף המודל מסמן אותו כ־Deprecated, ודף Deprecations מציין הסרה של gpt-5-2025-08-07 ב־11 בדצמבר 2026. ההמלצה במסמך תקפה לשימוש במודל כל עוד הוא זמין לחשבון; היא אינה מבטיחה שירות מתמשך לאחר הסרתו. אין להסתמך על alias כדי לעקוף פרישה של המודל. [11, 12]
+GPT-5 (gpt-5-2025-08-07) מסומן Deprecated, ודף Deprecations מציין את הסרתו ב־11 בדצמבר 2026. לכן אין להשתמש בו במוצר. [11, 12]
 
-מזהה המודל ייקרא מתצורת שרת שערכה gpt-5, ללא מעבר אוטומטי למודל אחר. אם אינו זמין, יוצג כישלון היצירה הרגיל. לצורך המשך שירות לאחר הפרישה תידרש החלטת מוצר מפורשת על שינוי המודל ועדכון ה־PRD; מסמך זה אינו מאשר שינוי כזה.
+מזהה המודל ייקרא מתצורת השרת OPENAI_MODEL בלבד; הקוד אינו מכיר שם מודל קבוע. בתחילת Milestone 1 ייבחר המודל הראשוני לפי הכללים הבאים, והבחירה תוצג למשתמש לאישור ותתועד כ־ADR:
+
+- מודל טקסט של OpenAI שנתמך ב־Responses API, זמין לחשבון ואינו מופיע בדף Deprecations.
+- עדיפות למודל מהיר וזול המתאים לטקסט קצר, ולא למודל ה־Reasoning החזק ביותר.
+- בדיקה מדגמית שהמודל מייצר בדיחות בעברית תקינה ונקייה.
+
+אין מעבר אוטומטי למודל אחר בזמן ריצה. אם המודל המוגדר אינו זמין, יוצג כישלון היצירה הרגיל. החלפת מודל בעתיד היא שינוי של OPENAI_MODEL ו־Deployment חדש, ללא שינוי קוד; כדאי לבדוק את דף Deprecations מדי כמה חודשים.
 
 ## 2. מבנה המערכת ואחריות הרכיבים
 
@@ -61,7 +67,7 @@ GPT-5 נשמר בהתאם לדרישת המוצר. עם זאת, דף המודל 
 - בזמן loading יש לנעול את הלחצן וגם להשתמש בשומר בקשה פנימי, כדי למנוע שליחה כפולה לפני שה־UI מתעדכן.
 - בזמן ההמתנה יוצג „מכינים לך בדיחה…”. בכל כישלון יוצג „לא הצלחנו ליצור בדיחה. נסו שוב”.
 - הבקשה משתמשת בערך התיבה בזמן הלחיצה. ה־Frontend לא ישנה את הנושא שהוזן; נרמול יתבצע גם בשרת.
-- אחרי הצלחה, הבדיחה החדשה תחליף את הקודמת. במקרה כישלון ניתן להשאיר את הבדיחה הקודמת ולהציג את השגיאה בנפרד.
+- אזור תוצאה אחד (כרטיס הבדיחה) מציג בכל רגע מצב אחד: הודעת ההמתנה, הבדיחה או הודעת התקלה, לפי DESIGN. אחרי הצלחה, הבדיחה החדשה מחליפה את הקודמת; בכישלון, הודעת התקלה מחליפה את תוכן הכרטיס.
 - התוצאה תוצג כטקסט רגיל, עם שמירת ירידות שורה, ללא HTML או Markdown Rendering מהמודל.
 - התיבה תהיה בעלת label, ולמצב ההמתנה ולתוצאה יהיה אזור aria-live. העיצוב יתאים למסכים צרים ולמקלדת מובייל.
 - אין Redux, ספריית ניהול Server State, היסטוריה או שמירה בין ביקורים.
@@ -123,7 +129,7 @@ POST /api/joke, באותו Origin, עם Content-Type: application/json.
 2. Vercel WAF בודק הגבלת בקשות לפני הפעלת ה־Function.
 3. השרת מאמת JSON, מגביל את גודל הגוף ומבצע trim לנושא.
 4. Joke Service בונה הוראות קבועות ומשלב את הנושא כנתון משתמש.
-5. OpenAI Adapter קורא ל־Responses API עם GPT-5.
+5. OpenAI Adapter קורא ל־Responses API עם המודל המוגדר ב־OPENAI_MODEL.
 6. השרת מוודא שהתקבל פלט מלא ולא ריק, ולאחר מכן בודק אותו ב־Moderation.
 7. אם הפלט נדחה מטעמי תוכן, השרת מנסה פעם אחת יצירת בדיחה כללית נקייה ובודק גם אותה. אם גם היא נכשלת, מוחזרת שגיאה.
 8. מוחזרת רק הבדיחה שאושרה; הלקוח מציג אותה ומשחרר את הלחצן.
@@ -138,15 +144,17 @@ Responses API נבחר על פני Chat Completions הנתמך גם הוא, בה
 
 נושא המשתמש יועבר בהודעת user נפרדת מהוראות השרת, כטקסט ולא כהוראה לשינוי ההתנהגות. בקשות „התעלם מההוראות” אינן יכולת של המוצר. המודל אינו מקבל סודות, אינו מפעיל Tools ואינו ניגש למקורות חיצוניים.
 
-Moderation תופעל על הפלט באמצעות omni-moderation-latest. תוצאה flagged לא תוצג. השירות מוצע ללא תשלום לפי התיעוד שנבדק. אין בכך הבטחה שסיווג אוטומטי יזהה כל תוכן שאינו מתאים לילדים; הנחיות היצירה ובדיקת דוגמאות בעברית משלימות אותו. בכשל של בדיקת התוכן לא חושפים פלט שלא נבדק. [13]
+Moderation תופעל על הפלט באמצעות omni-moderation-latest. תוצאה flagged לא תוצג. השירות מוצע ללא תשלום לפי התיעוד שנבדק. בכשל של בדיקת התוכן לא חושפים פלט שלא נבדק. [13]
 
-**תצורה הנדסית התחלתית, שאינה דרישת מוצר:** reasoning.effort יהיה minimal, ו־max_output_tokens יהיה 1024 לכל יצירה. המגבלה כוללת גם Reasoning Tokens ולכן אינה מבטיחה מספר מילים. אין להוסיף temperature שאינו נתמך בתצורת המודל. אם התשובה incomplete, ריקה או refusal — אין להציגה כבדיחה. סירוב יכול להפעיל את ניסיון הבדיחה הכללית; כשל תקשורת או פלט שנקטע יוחזרו כשגיאה. [11]
+Moderation מזהה תוכן מזיק בבירור (אלימות, תוכן מיני, שנאה וכו'), אך אינו מסווג "מתאים לילדים". בדיחה גבולית או לא מנומסת עשויה לעבור אותו. לכן ההגנה העיקרית היא הוראות היצירה, ו־Moderation הוא שכבת ביטחון נוספת. יש לבדוק ידנית את התוצאות על רשימה קבועה של נושאים רגישים (ראה MILESTONES) ולחזק את ההוראות לפי הצורך.
+
+**תצורה הנדסית התחלתית, שאינה דרישת מוצר:** max_output_tokens יהיה 1024 לכל יצירה. אם המודל שנבחר הוא מודל Reasoning, reasoning.effort יוגדר לרמה הנמוכה ביותר שהוא תומך בה, והמגבלה כוללת גם Reasoning Tokens. אין לשלוח פרמטרים (כגון temperature או reasoning) שהמודל שנבחר אינו תומך בהם. אם התשובה incomplete, ריקה או refusal — אין להציגה כבדיחה. סירוב יכול להפעיל את ניסיון הבדיחה הכללית; כשל תקשורת או פלט שנקטע יוחזרו כשגיאה. [11]
 
 ## 7. זמני בקשה, אמינות ויכולת צמיחה
 
-**ברירות מחדל טכניות:** גוף בקשה עד 8 KiB; תקציב זמן כולל של 90 שניות בשרת; Timeout לכל קריאת יצירה עד 30 שניות ולכל Moderation עד 10 שניות, ובכל מקרה לא מעבר לזמן שנותר. maxDuration של ה־Function יוגדר ל־120 שניות, ו־Timeout של הלקוח ל־100 שניות. אלה גבולות הגנה ולא SLA שהובטח למשתמש.
+**ברירות מחדל טכניות:** גוף בקשה עד 8 KiB; תקציב זמן כולל של 25 שניות בשרת; Timeout לכל קריאת יצירה עד 10 שניות ולכל Moderation עד 4 שניות, ובכל מקרה לא מעבר לזמן שנותר בתקציב. maxDuration של ה־Function יוגדר ל־30 שניות, ו־Timeout של הלקוח ל־30 שניות. בדיחה קצרה אמורה להגיע בתוך שניות ספורות; משתמש, ובמיוחד ילד, לא ימתין דקה ומעלה. אלה גבולות הגנה ולא SLA שהובטח למשתמש. אם בבדיקות במודל שנבחר הזמנים האמיתיים חורגים מהגבולות, יש לעדכן אותם ב־ADR.
 
-מגבלת ה־Function הנוכחית ב־Hobby עם Fluid Compute היא עד 300 שניות, ולכן ההגדרה מתאימה למודל ההרצה ללא צורך ב־Background Job. [14]
+הערכים נמוכים בהרבה ממגבלת ה־Function ב־Hobby עם Fluid Compute, ולכן אין צורך ב־Background Job. [14]
 
 ה־SDK יוגדר עם maxRetries: 0 כדי למנוע ניסיונות חיוב חוזרים אוטומטיים. ניסיון תוכן חלופי יחיד הוא חריג מכוון ונכלל בתקציב הזמן. במקרה Timeout, ביטול בקשת הלקוח אינו מבטיח ביטול חיוב שכבר נוצר אצל הספק.
 
@@ -154,7 +162,7 @@ Moderation תופעל על הפלט באמצעות omni-moderation-latest. תו�
 
 ## 8. PWA
 
-יש להגדיר Manifest באמצעות התמיכה המובנית של Next.js: שם תצוגה בעברית, lang: he, dir: rtl, start_url: /, display: standalone ואייקונים 192×192 ו־512×512; יש להוסיף apple-touch-icon ולהגיש באמצעות HTTPS. שם העבודה לצורך Manifest הוא „בדיחה בשבילך” — הנחת מיתוג טכנית הניתנת להחלפה.
+יש להגדיר Manifest באמצעות התמיכה המובנית של Next.js: שם תצוגה בעברית, lang: he, dir: rtl, start_url: /, display: standalone ואייקונים 192×192 ו־512×512; יש להוסיף apple-touch-icon ולהגיש באמצעות HTTPS. שם המוצר ב־Manifest הוא „בדיחה לכל”.
 
 אין צורך בתוסף PWA, ב־Service Worker או ב־Offline Cache בגרסה זו: Service Worker אינו תנאי כללי להתקנה בדפדפנים המודרניים, ויצירה ב־Offline הוצאה במפורש מהטווח. אין להוסיף Push Notifications או Background Sync מתוך דוגמאות התיעוד. [15, 16]
 
@@ -164,8 +172,12 @@ Moderation תופעל על הפלט באמצעות omni-moderation-latest. תו�
 
 - אין Authentication או Authorization למשתמשי הקצה. ה־API ציבורי בכוונה; אין להוסיף התחברות סמויה או Session.
 - מפתח OpenAI ייקרא רק ב־Module המסומן server-only. אין NEXT_PUBLIC_ למפתח, אין הכללתו ב־Bundle, ב־Git, ב־Logs או בתשובות.
-- יש לקבל רק POST עם application/json ולדחות Origin שאינו Origin האתר המאושר. בדיקת Origin אינה Authentication ואינה חוסמת לקוחות אוטומטיים.
-- הפלט יוצג כטקסט; אין dangerouslySetInnerHTML. יש להגדיר כותרות nosniff ו־frame-ancestors 'none', ו־CSP המתאים ל־Next.js ונבדק עם Build של Production.
+- יש לקבל רק POST עם application/json ולדחות Origin שאינו מאושר. Origin מאושר לפי סביבה:
+  - Production: הערך שב־APP_ORIGIN.
+  - Preview: הכתובת של ה־Deployment הנוכחי, הנגזרת ממשתני המערכת של Vercel (VERCEL_URL ו־VERCEL_BRANCH_URL), כי לכל Preview כתובת שונה.
+  - Development: http://localhost בפורט המקומי.
+  בדיקת Origin אינה Authentication ואינה חוסמת לקוחות אוטומטיים.
+- הפלט יוצג כטקסט; אין dangerouslySetInnerHTML. יש להגדיר את הכותרות X-Content-Type-Options: nosniff, Content-Security-Policy: frame-ancestors 'none' ו־Referrer-Policy: strict-origin-when-cross-origin. אין צורך ב־CSP מלא (עם Nonce לסקריפטים): האתר אינו מציג HTML מהמודל או מהמשתמש, ו־CSP מלא ב־Next.js מוסיף מורכבות ונטייה לתקלות שאינן מוצדקות במוצר זה.
 - מומלץ כלל WAF אחד על POST /api/joke לפי IP, למשל 10 בקשות לדקה כברירת מחדל תפעולית. זה אינו חשבון משתמש או מכסת מוצר. IP משותף עלול להשפיע על כמה משתמשים; יש להתאים את הסף לפי שימוש אמיתי. WAF מספק מונים מחוץ לזיכרון ה־Function ללא Database באפליקציה. זמינות ותמחור הכלל כפופים לתוכנית. [17]
 - אין לרשום נושאים, בדיחות, Prompts או מפתחות ב־Logs. ניטור יתמקד בסטטוס, משך, Request ID ושימוש Tokens. נתוני IP ו־Logs תשתיתיים עשויים להישמר אצל Vercel לפי תצורת השירות.
 - store: false מצמצם שמירת Response State אך אינו Zero Data Retention. לפי OpenAI, נתוני API אינם משמשים לאימון כברירת מחדל, ו־Abuse Monitoring עשוי לשמור מידע עד 30 יום. היעדר Database באפליקציה אינו משמעו שאין עיבוד או שמירה אצל הספקים. [18]
@@ -180,7 +192,7 @@ Moderation תופעל על הפלט באמצעות omni-moderation-latest. תו�
 | Preview | Vercel מענפי עבודה | מפתח פיתוח ב־Environment Variables של Preview; ללא מפתח Production |
 | Production | Vercel מענף main | מפתח Production רק ב־Environment Variables של Production |
 
-תצורת השרת תכלול OPENAI_API_KEY, OPENAI_MODEL=gpt-5 ו־APP_ORIGIN. גבולות זמן ופלט יוגדרו כתצורה פנימית עם ברירות המחדל שתוארו. Production ו־Preview לא ישתמשו באותו מפתח. שינוי Environment Variables יוחל באמצעות Deployment חדש. [19]
+תצורת השרת תכלול OPENAI_API_KEY, OPENAI_MODEL (המודל שנבחר ואושר ב־Milestone 1) ו־APP_ORIGIN (נדרש ב־Production בלבד). גבולות זמן ופלט יוגדרו כתצורה פנימית עם ברירות המחדל שתוארו. Production ו־Preview לא ישתמשו באותו מפתח. שינוי Environment Variables יוחל באמצעות Deployment חדש. [19]
 
 חיבור ה־Repository ל־Vercel ייצור Preview בעקבות Push לענף עבודה ו־Production Deployment בעקבות עדכון main. Vercel יבצע npm ci, בדיקות TypeScript ו־Lint, ואת next build; כישלון יכשיל את ה־Deployment. אין צורך לבצע קריאות AI אמיתיות בזמן Build. קוד המסך ונכסי PWA יופצו דרך CDN וה־Route Handler כ־Node.js Function. [5]
 
@@ -195,14 +207,14 @@ Moderation תופעל על הפלט באמצעות omni-moderation-latest. תו�
 | ספריות | Next.js, React, TypeScript ו־SDK רשמי אינם דורשים דמי רישוי לשימוש רגיל |
 | Vercel Hobby | 0 דולר לחודש בגבולות התוכנית; מתאים לשימוש אישי ולא מסחרי בלבד. חריגה עשויה להשעות יכולת עד לחידוש המכסה |
 | Vercel Pro | מחיר התחלתי מוצג של 20 דולר לחודש, עם חיובים אפשריים לפי שימוש ומושבי מפתחים |
-| GPT-5 | מחיר מתועד לכל מיליון Tokens: 1.25 דולר Input ו־10 דולר Output; Reasoning Tokens נכללים בחיוב Output |
+| מודל ה־AI | לפי מחירון המודל שייבחר. לשם השוואה, GPT-5 תמחר 1.25 דולר Input ו־10 דולר Output לכל מיליון Tokens; מודלים קטנים ומהירים זולים בדרך כלל משמעותית. Reasoning Tokens, אם קיימים, נכללים בחיוב Output |
 | Moderation | השירות מתועד כחינמי |
 | WAF | יש לבדוק את החיוב לפי תוכנית והיקף בדף התמחור; אין להניח ש־Rate Limiting אינו עולה כסף |
 | Database ו־Storage חיצוני | אינם נדרשים |
 
 מחירי Hosting ו־AI נפרדים, בדולר ולפני מסים, ונכונים לבדיקה זו. לצורך שימוש אישי לא מסחרי אפשר להתחיל ב־Hobby; שימוש מסחרי מחייב תוכנית המתירה זאת. לא הוגדר אופי מסחרי או תקציב, ולכן אין התחייבות לעלות חודשית כוללת. [6, 11, 13, 20, 21]
 
-**דוגמת חישוב בלבד:** בקשת יצירה עם 300 Input Tokens ו־200 Output Tokens מחויבים עולה כ־0.002375 דולר; 1,000 בקשות כאלה כ־2.38 דולר. זה אינו אומדן לתעבורה צפויה: Reasoning, ניסיונות fallback ואורכי קלט שונים משנים את הסכום.
+**דוגמת חישוב בלבד, לפי מחירי GPT-5:** בקשת יצירה עם 300 Input Tokens ו־200 Output Tokens מחויבים עולה כ־0.002375 דולר; 1,000 בקשות כאלה כ־2.38 דולר. זה אינו אומדן לתעבורה צפויה: Reasoning, ניסיונות fallback ואורכי קלט שונים משנים את הסכום.
 
 יש להגדיר התראות שימוש אצל OpenAI ו־Vercel. התראת תקציב אינה בהכרח חסימה קשיחה; אין להבטיח תקרת הוצאה אוטומטית שאינה נאכפת בתוכנית. מניעת הוצאות נשענת גם על Rate Limit, הגבלת Tokens ויכולת המפעיל להשבית את ה־API.
 
@@ -220,7 +232,7 @@ Moderation תופעל על הפלט באמצעות omni-moderation-latest. תו�
 8. [OpenAI — Official Node.js SDK](https://github.com/openai/openai-node) ו־[Vercel AI SDK](https://ai-sdk.dev/docs/introduction)
 9. [OpenAI — Text generation](https://developers.openai.com/api/docs/guides/text)
 10. [Vercel — Node.js versions](https://vercel.com/docs/functions/runtimes/node-js/node-js-versions)
-11. [OpenAI — GPT-5 model, capabilities and pricing](https://developers.openai.com/api/docs/models/gpt-5)
+11. [OpenAI — GPT-5 model, capabilities and pricing (להשוואה)](https://developers.openai.com/api/docs/models/gpt-5)
 12. [OpenAI — Deprecations](https://developers.openai.com/api/docs/deprecations)
 13. [OpenAI — Moderation](https://developers.openai.com/api/docs/guides/moderation)
 14. [Vercel — Functions limits](https://vercel.com/docs/functions/limitations)
