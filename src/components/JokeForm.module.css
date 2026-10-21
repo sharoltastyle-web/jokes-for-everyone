@@ -29,7 +29,9 @@
 
 .input:focus {
   border-color: var(--color-secondary);
-  box-shadow: 0 0 0 4px rgba(8, 152, 198, 0.15);
+  box-shadow:
+    0 0 0 2px var(--color-secondary),
+    0 0 0 6px rgba(8, 152, 198, 0.2);
 }
 
 .button {

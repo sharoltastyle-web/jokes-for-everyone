@@ -260,3 +260,13 @@ Moderation מזהה תוכן מזיק בבירור (אלימות, תוכן מי�
 **הקשר:** תבנית `create-next-app` של Next.js 16.4 מפעילה `cacheComponents` כברירת מחדל, ובמצב זה אסור לייצא `runtime` מ־Route Handler.
 **החלטה:** נשמרה ברירת המחדל; ה־Route Handler רץ ב־Node.js כברירת מחדל ללא `export const runtime`, עם `maxDuration = 30`.
 **השלכות:** המסך מוגש כסטטי וה־API דינמי, כמתוכנן ב־ARCHITECTURE.
+
+### ADR-4: Vitest לבדיקות עם Mock
+**הקשר:** Milestone 2 מחייב בדיקות Mock לזרימת התוכן, ל־fallback, לתקציב הזמן, לחוזה ה־API ולטיפול בתקלות בלקוח. בפרויקט לא היה כלי בדיקות.
+**החלטה:** Vitest כ־devDependency, עם `vitest.config.mts` ובדיקות בתיקייה `tests/`; מריצים עם `npm test`. OpenAI, ה־Joke Service ו־fetch מוחלפים ב־Mock; החבילה `server-only` ממופה למודול ריק בבדיקות.
+**השלכות:** אין קריאות AI חיות בבדיקות האוטומטיות ואין השפעה על ה־Bundle. בדיקות אינטגרציה חיות נשארות ידניות, עם מפתח הפיתוח.
+
+### ADR-5: דחיית Origin — קוד 403, ו־Origin חסר נדחה
+**הקשר:** סעיף 9 מחייב לדחות Origin שאינו מאושר, אך טבלת הקודים בסעיף 5 אינה מגדירה קוד לכך.
+**החלטה:** Origin שאינו ברשימה, או בקשה בלי Origin, מקבלים 403 עם `{"error":{"code":"FORBIDDEN_ORIGIN"}}`. הרשימה: `APP_ORIGIN`, ‏`https://` + `VERCEL_URL` / `VERCEL_BRANCH_URL`, וב־Development בלבד `http://localhost:<PORT או 3000>`. הבדיקה מתבצעת לפני כל בדיקה אחרת של הבקשה.
+**השלכות:** דפדפנים שולחים Origin בכל POST, ולכן המסך אינו מושפע. כלים כמו curl חייבים לשלוח כותרת Origin מאושרת. בהרצת Production מקומית (`npm start`) יש להגדיר `APP_ORIGIN` לכתובת המקומית.
