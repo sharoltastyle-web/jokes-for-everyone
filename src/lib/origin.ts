@@ -6,6 +6,10 @@ function allowedOrigins(): Set<string> {
   if (process.env.APP_ORIGIN) {
     origins.add(process.env.APP_ORIGIN.replace(/\/+$/, ""));
   }
+  // Production domain, provided by Vercel in every environment (ADR-7).
+  if (process.env.VERCEL_PROJECT_PRODUCTION_URL) {
+    origins.add(`https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`);
+  }
   if (process.env.VERCEL_URL) {
     origins.add(`https://${process.env.VERCEL_URL}`);
   }

@@ -135,6 +135,14 @@ describe("POST /api/joke", () => {
     expect(res.status).toBe(200);
   });
 
+  it("accepts the Vercel production domain", async () => {
+    vi.stubEnv("APP_ORIGIN", "");
+    vi.stubEnv("VERCEL_PROJECT_PRODUCTION_URL", "app.vercel.app");
+
+    expect((await POST(post("{}", { origin: "https://app.vercel.app" }))).status).toBe(200);
+    expect((await POST(post("{}", { origin: "https://evil.example" }))).status).toBe(403);
+  });
+
   it("accepts localhost only in development", async () => {
     vi.stubEnv("APP_ORIGIN", "");
     const local = { origin: "http://localhost:3000" };

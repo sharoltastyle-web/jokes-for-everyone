@@ -36,7 +36,7 @@ Vercel מתאים לבקשות Stateless קצרות יחסית ומספק חיב
 
 GPT-5 (gpt-5-2025-08-07) מסומן Deprecated, ודף Deprecations מציין את הסרתו ב־11 בדצמבר 2026. לכן אין להשתמש בו במוצר. [11, 12]
 
-מזהה המודל ייקרא מתצורת השרת OPENAI_MODEL בלבד; הקוד אינו מכיר שם מודל קבוע. בתחילת Milestone 1 ייבחר המודל הראשוני לפי הכללים הבאים, והבחירה תוצג למשתמש לאישור ותתועד כ־ADR:
+מזהה המודל המאושר מוגדר כברירת מחדל בקוד, ותצורת השרת OPENAI_MODEL יכולה לעקוף אותו (ראה ADR-7). בתחילת Milestone 1 ייבחר המודל הראשוני לפי הכללים הבאים, והבחירה תוצג למשתמש לאישור ותתועד כ־ADR:
 
 - מודל טקסט של OpenAI שנתמך ב־Responses API, זמין לחשבון ואינו מופיע בדף Deprecations.
 - עדיפות למודל מהיר וזול המתאים לטקסט קצר, ולא למודל ה־Reasoning החזק ביותר.
@@ -173,7 +173,7 @@ Moderation מזהה תוכן מזיק בבירור (אלימות, תוכן מי�
 - אין Authentication או Authorization למשתמשי הקצה. ה־API ציבורי בכוונה; אין להוסיף התחברות סמויה או Session.
 - מפתח OpenAI ייקרא רק ב־Module המסומן server-only. אין NEXT_PUBLIC_ למפתח, אין הכללתו ב־Bundle, ב־Git, ב־Logs או בתשובות.
 - יש לקבל רק POST עם application/json ולדחות Origin שאינו מאושר. Origin מאושר לפי סביבה:
-  - Production: הערך שב־APP_ORIGIN.
+  - Production: הדומיין הראשי של הפרויקט, הנגזר ממשתנה המערכת של Vercel VERCEL_PROJECT_PRODUCTION_URL; ‏APP_ORIGIN נשאר אופציונלי (למשל לדומיין מותאם או להרצת Production מקומית). ראה ADR-7.
   - Preview: הכתובת של ה־Deployment הנוכחי, הנגזרת ממשתני המערכת של Vercel (VERCEL_URL ו־VERCEL_BRANCH_URL), כי לכל Preview כתובת שונה.
   - Development: http://localhost בפורט המקומי.
   בדיקת Origin אינה Authentication ואינה חוסמת לקוחות אוטומטיים.
@@ -192,7 +192,7 @@ Moderation מזהה תוכן מזיק בבירור (אלימות, תוכן מי�
 | Preview | Vercel מענפי עבודה | מפתח פיתוח ב־Environment Variables של Preview; ללא מפתח Production |
 | Production | Vercel מענף main | מפתח Production רק ב־Environment Variables של Production |
 
-תצורת השרת תכלול OPENAI_API_KEY, OPENAI_MODEL (המודל שנבחר ואושר ב־Milestone 1) ו־APP_ORIGIN (נדרש ב־Production בלבד). גבולות זמן ופלט יוגדרו כתצורה פנימית עם ברירות המחדל שתוארו. Production ו־Preview לא ישתמשו באותו מפתח. שינוי Environment Variables יוחל באמצעות Deployment חדש. [19]
+תצורת השרת החובה היא OPENAI_API_KEY בלבד. OPENAI_MODEL ו־APP_ORIGIN אופציונליים ועוקפים את ברירות המחדל שבקוד (ADR-7). גבולות זמן ופלט יוגדרו כתצורה פנימית עם ברירות המחדל שתוארו. Production ו־Preview לא ישתמשו באותו מפתח. שינוי Environment Variables יוחל באמצעות Deployment חדש. [19]
 
 חיבור ה־Repository ל־Vercel ייצור Preview בעקבות Push לענף עבודה ו־Production Deployment בעקבות עדכון main. Vercel יבצע npm ci, בדיקות TypeScript ו־Lint, ואת next build; כישלון יכשיל את ה־Deployment. אין צורך לבצע קריאות AI אמיתיות בזמן Build. קוד המסך ונכסי PWA יופצו דרך CDN וה־Route Handler כ־Node.js Function. [5]
 
@@ -270,3 +270,13 @@ Moderation מזהה תוכן מזיק בבירור (אלימות, תוכן מי�
 **הקשר:** סעיף 9 מחייב לדחות Origin שאינו מאושר, אך טבלת הקודים בסעיף 5 אינה מגדירה קוד לכך.
 **החלטה:** Origin שאינו ברשימה, או בקשה בלי Origin, מקבלים 403 עם `{"error":{"code":"FORBIDDEN_ORIGIN"}}`. הרשימה: `APP_ORIGIN`, ‏`https://` + `VERCEL_URL` / `VERCEL_BRANCH_URL`, וב־Development בלבד `http://localhost:<PORT או 3000>`. הבדיקה מתבצעת לפני כל בדיקה אחרת של הבקשה.
 **השלכות:** דפדפנים שולחים Origin בכל POST, ולכן המסך אינו מושפע. כלים כמו curl חייבים לשלוח כותרת Origin מאושרת. בהרצת Production מקומית (`npm start`) יש להגדיר `APP_ORIGIN` לכתובת המקומית.
+
+### ADR-6: תצורת ה־Build ב־Vercel בקובץ `vercel.json`
+**הקשר:** סעיף 10 מחייב npm ci, בדיקות TypeScript ו־Lint ו־next build. ב־Next.js 16 ‏`next build` בודק TypeScript אך אינו מריץ Lint. כלל 7 ב־MILESTONES מחייב שכל שינוי יעבור את בדיקותיו לפני עדכון Production.
+**החלטה:** `vercel.json` בשורש הפרויקט: `installCommand: "npm ci"`, ‏`buildCommand: "npm run lint && npm test && npm run build"`, ‏`fluid: true`. Node.js 24.x נקבע מ־`engines` ב־package.json.
+**השלכות:** התצורה נשמרת ב־Git ולא רק בלוח הבקרה. בדיקות ה־Mock רצות בכל Deployment (ללא קריאות AI חיות); כשל בכל שלב מכשיל את ה־Deployment.
+
+### ADR-7: ברירות מחדל בקוד למודל ולכתובת Production
+**הקשר:** המשתמשת ביקשה להגדיר ב־Vercel רק את המפתחות הסודיים. במקור, OPENAI_MODEL ו־APP_ORIGIN היו משתני חובה.
+**החלטה (אושרה על ידי המשתמשת):** `src/lib/openai.ts` משתמש ב־`gpt-5.6-luna` כברירת מחדל, ו־OPENAI_MODEL עוקף אותו אם הוגדר. `src/lib/origin.ts` מאשר את `https://` + `VERCEL_PROJECT_PRODUCTION_URL` (משתנה מערכת של Vercel), בנוסף ל־APP_ORIGIN האופציונלי, ל־Preview ול־localhost. ב־Vercel מוגדרים רק `OPENAI_API_KEY` — מפתח Production ב־Production, ומפתח הפיתוח ב־Preview וב־Development.
+**השלכות:** שם המודל שמור ב־Git (אינו סוד). החלפת מודל מתבצעת בשינוי קוד ו־Deployment, או בהגדרת OPENAI_MODEL ב־Vercel. דומיין מותאם בעתיד ידרוש להגדירו כדומיין הראשי ב־Vercel או להגדיר APP_ORIGIN.
