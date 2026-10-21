@@ -11,6 +11,7 @@ const heebo = Heebo({
 export const metadata: Metadata = {
   title: "בדיחה לכל",
   description: "יצירת בדיחה בעברית בנושא לבחירתך",
+  appleWebApp: { title: "בדיחה לכל" },
 };
 
 export const viewport: Viewport = {
