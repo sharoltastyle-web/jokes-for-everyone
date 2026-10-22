@@ -98,7 +98,7 @@
 ### מה יש לממש
 
 - חיבור ה־Repository ל־Vercel והגדרת Preview מענפי עבודה ו־Production מענף main.
-- הגדרת מפתח פיתוח ל־Development ול־Preview ומפתח Production נפרד רק בסביבת Production של Vercel.
+- הגדרת מפתח OpenAI אחד לכל הסביבות (Development, Preview ו־Production), לפי ADR-8.
 - הגדרת OPENAI_MODEL, APP_ORIGIN, Node.js, Fluid Compute ו־maxDuration לפי ARCHITECTURE.
 - Pipeline הכולל npm ci, בדיקות TypeScript ו־Lint ו־next build, ללא קריאות AI חיות בזמן Build.
 - Manifest בשם „בדיחה לכל”, עברית ו־RTL, start_url, standalone, אייקונים במידות המוגדרות ו־apple-touch-icon.
@@ -116,7 +116,7 @@
 - [ ] לא ממזגים ל־main במהלך אבני הדרך הקודמות באופן שיפרס גרסה ציבורית חלקית; ה־Production Deployment מבוצע במסגרת אבן דרך זו.
 - [ ] ב־Production ניתן ליצור בדיחה אמיתית עם נושא ובלעדיו באמצעות המודל שנבחר, ללא הרשמה או הגנת כניסה.
 - [ ] ב־Preview יצירת בדיחה עובדת (בדיקת ה־Origin מאשרת את כתובת ה־Preview), ובקשה מ־Origin זר נדחית.
-- [ ] מפתח Production אינו נגיש ב־Preview, במחשב הפיתוח, ב־Repository או בדפדפן; לאחר שינוי תצורה בוצע Deployment שמחיל אותה.
+- [ ] המפתח אינו נגיש ב־Repository, ב־Bundle או בדפדפן, ומוגדר ב־Vercel כ־Sensitive; לאחר שינוי תצורה בוצע Deployment שמחיל אותה.
 - [ ] ה־Manifest תקין ושמו „בדיחה לכל”; אייקונים ו־HTTPS זמינים, והאפליקציה נפתחת בהתקנה תומכת במצב standalone.
 - [ ] נבדקה התקנה ב־Chrome על Android והוספה למסך הבית ב־Safari על iOS, ככל שסביבות בדיקה אלה זמינות. בדיקה שלא בוצעה מסומנת כחסרה ואינה מדווחת כהצלחה.
 - [ ] האתר עובד גם ללא התקנה; ניסיון יצירה ללא חיבור לאחר טעינה מציג את הודעת התקלה הרגילה. אין דרישה לפתיחה קרה ב־Offline.

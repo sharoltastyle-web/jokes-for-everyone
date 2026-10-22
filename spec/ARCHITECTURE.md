@@ -188,11 +188,11 @@ Moderation מזהה תוכן מזיק בבירור (אלימות, תוכן מי�
 
 | סביבה | הרצה | פרטי גישה |
 |---|---|---|
-| Development | Next.js מקומי | מפתח פיתוח נפרד ב־.env.local, המוחרג מ־Git |
-| Preview | Vercel מענפי עבודה | מפתח פיתוח ב־Environment Variables של Preview; ללא מפתח Production |
-| Production | Vercel מענף main | מפתח Production רק ב־Environment Variables של Production |
+| Development | Next.js מקומי | מפתח OpenAI יחיד ב־.env, המוחרג מ־Git (ADR-8) |
+| Preview | Vercel מענפי עבודה | אותו מפתח, ב־Environment Variables של Vercel |
+| Production | Vercel מענף main | אותו מפתח, ב־Environment Variables של Vercel |
 
-תצורת השרת החובה היא OPENAI_API_KEY בלבד. OPENAI_MODEL ו־APP_ORIGIN אופציונליים ועוקפים את ברירות המחדל שבקוד (ADR-7). גבולות זמן ופלט יוגדרו כתצורה פנימית עם ברירות המחדל שתוארו. Production ו־Preview לא ישתמשו באותו מפתח. שינוי Environment Variables יוחל באמצעות Deployment חדש. [19]
+תצורת השרת החובה היא OPENAI_API_KEY בלבד. OPENAI_MODEL ו־APP_ORIGIN אופציונליים ועוקפים את ברירות המחדל שבקוד (ADR-7). גבולות זמן ופלט יוגדרו כתצורה פנימית עם ברירות המחדל שתוארו. כל הסביבות משתמשות במפתח OpenAI אחד (ADR-8). שינוי Environment Variables יוחל באמצעות Deployment חדש. [19]
 
 חיבור ה־Repository ל־Vercel ייצור Preview בעקבות Push לענף עבודה ו־Production Deployment בעקבות עדכון main. Vercel יבצע npm ci, בדיקות TypeScript ו־Lint, ואת next build; כישלון יכשיל את ה־Deployment. אין צורך לבצע קריאות AI אמיתיות בזמן Build. קוד המסך ונכסי PWA יופצו דרך CDN וה־Route Handler כ־Node.js Function. [5]
 
@@ -278,5 +278,10 @@ Moderation מזהה תוכן מזיק בבירור (אלימות, תוכן מי�
 
 ### ADR-7: ברירות מחדל בקוד למודל ולכתובת Production
 **הקשר:** המשתמשת ביקשה להגדיר ב־Vercel רק את המפתחות הסודיים. במקור, OPENAI_MODEL ו־APP_ORIGIN היו משתני חובה.
-**החלטה (אושרה על ידי המשתמשת):** `src/lib/openai.ts` משתמש ב־`gpt-5.6-luna` כברירת מחדל, ו־OPENAI_MODEL עוקף אותו אם הוגדר. `src/lib/origin.ts` מאשר את `https://` + `VERCEL_PROJECT_PRODUCTION_URL` (משתנה מערכת של Vercel), בנוסף ל־APP_ORIGIN האופציונלי, ל־Preview ול־localhost. ב־Vercel מוגדרים רק `OPENAI_API_KEY` — מפתח Production ב־Production, ומפתח הפיתוח ב־Preview וב־Development.
+**החלטה (אושרה על ידי המשתמשת):** `src/lib/openai.ts` משתמש ב־`gpt-5.6-luna` כברירת מחדל, ו־OPENAI_MODEL עוקף אותו אם הוגדר. `src/lib/origin.ts` מאשר את `https://` + `VERCEL_PROJECT_PRODUCTION_URL` (משתנה מערכת של Vercel), בנוסף ל־APP_ORIGIN האופציונלי, ל־Preview ול־localhost. ב־Vercel מוגדרים רק `OPENAI_API_KEY`, לכל הסביבות (ראה ADR-8).
 **השלכות:** שם המודל שמור ב־Git (אינו סוד). החלפת מודל מתבצעת בשינוי קוד ו־Deployment, או בהגדרת OPENAI_MODEL ב־Vercel. דומיין מותאם בעתיד ידרוש להגדירו כדומיין הראשי ב־Vercel או להגדיר APP_ORIGIN.
+
+### ADR-8: מפתח OpenAI אחד לכל הסביבות
+**הקשר:** סעיף 10 ו־Milestone 3 דרשו מפתח Production נפרד ממפתח הפיתוח. המשתמשת החליטה (בהתייעצות עם המורה שלה) להסתפק במפתח אחד.
+**החלטה (אושרה על ידי המשתמשת):** אותו `OPENAI_API_KEY` משמש את Development (ב־`.env`), את Preview ואת Production (ב־Environment Variables של Vercel, מסומן Sensitive). המפתח עדיין אינו נחשף ב־Git, ב־Bundle, ב־Logs או בתשובות.
+**השלכות:** ביטול או החלפת המפתח משפיעים על כל הסביבות יחד; אי אפשר להפריד ב־OpenAI בין עלויות האתר הציבורי לעלויות הפיתוח והבדיקות. מעבר עתידי למפתחות נפרדים הוא שינוי הגדרות ב־Vercel בלבד, ללא שינוי קוד.
